@@ -1,0 +1,37 @@
+name: Build docs
+on:
+  repository_dispatch:
+    types: [release]
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+      - name: Install base dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox
+      - name: install gp-lts-workflow
+        run: |
+          git clone https://github.com/adonath/gp-lts-workflow.git
+          cd gp-lts-workflow
+          tox -e build_docs
+      - name: copy docs
+        run: |
+          rm -rf docs/dev
+          release="${{ github.event.client_payload.release }}"
+          mv gp-lts-workflow/docs/_build/html docs/${release}
+      - name: commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4.1.6
+        if: success()
+        with:
+          commit_author: GitHub Actions <actions@github.com>
+          commit_message: commit docs build
